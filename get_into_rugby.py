@@ -14,9 +14,11 @@ ids_str = '15232261, 1536864'
 # get prepared...
 driver = wd.Chrome()
 driver.get('http://vk.com/')
+conf = CP()
+conf.read('vk_settings.ini')
 # authorization. no sanity check (((
-driver.find_element_by_name('email').send_keys(CP.get('Settings', 'Login'))
-driver.find_element_by_name('pass').send_keys(CP.get('Settings', 'Password'))
+driver.find_element_by_name('email').send_keys(conf.get('Settings', 'Login'))
+driver.find_element_by_name('pass').send_keys(conf.get('Settings', 'Password'))
 driver.find_element_by_id('quick_login_button').click()
 
 # aux functions
