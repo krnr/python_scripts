@@ -14,9 +14,9 @@ ids_str = '15232261, 1536864'
 # get prepared...
 driver = wd.Chrome()
 driver.get('http://vk.com/')
-# authorization
-driver.find_element_by_name('email').send_keys(conf.get('Settings', 'Login'))
-driver.find_element_by_name('pass').send_keys(conf.get('Settings', 'Password'))
+# authorization. no sanity check (((
+driver.find_element_by_name('email').send_keys(CP.get('Settings', 'Login'))
+driver.find_element_by_name('pass').send_keys(CP.get('Settings', 'Password'))
 driver.find_element_by_id('quick_login_button').click()
 
 # aux functions
@@ -43,13 +43,13 @@ def friends_add(user_id):
     driver.find_element_by_id('dev_const_user_id').send_keys(user_id)
     time.sleep(rnd_time())
     driver.find_element_by_id('dev_const_text').clear()
-    txt = u'ах ты ж блядь сучара! а картинки-то нельзя вставлять!!! но я доволен, включайте меня'
+    txt = u'ах ты ж блядь сучара! а картинки-то и тэги нельзя вставлять!!! че ж делать-то?'
     driver.find_element_by_id('dev_const_text').send_keys(txt)
     time.sleep(rnd_time())
     driver.find_element_by_id('dev_req_run_btn').click()
     time.sleep(rnd_time())
 
-# try to fill forms on the page http://vk.com/dev/messages.send
+# try to fill out the forms on the page http://vk.com/dev/messages.send
 driver.get('http://vk.com/dev/messages.send')
 
 try:
@@ -63,15 +63,15 @@ finally:
     time.sleep(rnd_time())
     driver.find_element_by_id('dev_const_message').clear()
     time.sleep(rnd_time())
-    #driver.find_element_by_id('dev_const_message').send_keys(txt)
-    driver.find_element_by_id('dev_const_attachment').send_keys('photo3095244_396678520')
+    driver.find_element_by_id('dev_const_message').send_keys(txt)
+    driver.find_element_by_id('dev_const_attachment').send_keys('photo3095244_396678520') # need SFW photo
     time.sleep(rnd_time())
     driver.find_element_by_id('dev_req_run_btn').click()
     time.sleep(rnd_time())
     
     if driver.find_element_by_class_name('dev_result_key').text == u'error:':
         print "Houston, we got a problem..."
-        # a user prohibited to send messages to him
+        # a user prohibits to send messages to him
         # let's try to add him to the friendlist with aux function friends_add()
         # find user_ids in the response
         users = parse_uid(driver.find_element_by_class_name('dev_result_obj'))
