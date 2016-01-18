@@ -1,21 +1,28 @@
 # -*- coding: UTF-8 -*-
 from selenium import webdriver as wd
-from selenium.webdriver.support.ui import WebDriverWait as Wait
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait as Wait
 from selenium.webdriver.support import expected_conditions as EC
 from ConfigParser import ConfigParser as CP
-import time
+import time, sqlite3, random
 
 #group_id = 57030008
-txt = u'это тест. он пройден, если есть ссылка на отдельной строчке: <br>---------<br>тэги работают<br>это ссылка на фото<br>https://pbs.twimg.com/media/CVj1eaWWUAAZ2mX.png:large<br>а еще должно быть вложение'
-#ids_list = [1536864, 2236629, 2325220, 3095244, 4794785, 5330990, 6117759, 7891730, 8744806, 11278407, 15232261, 16440280, 22251561, 23907065, 27526121, 28934938, 28953056, 56660822, 61769013, 62251552, 64169443, 73365184, 84096867, 84375827, 91516586, 97612115, 97978235, 104943492, 137664271, 174968809, 187828606, 189530794, 192144920, 200405416, 232166033, 282986007, 303700648]
-ids_str = '15232261, 1536864'
+
+# need random txt. better import from file some list
+txt_list=[u"Привет", u"Как тебе тема?", u"Че думаешь про это?", u"Хочешь попробовать?", u"Почему ты ещё не с нами?", u"Я команду собираю, хочешь порубиться?"]
+
+# txt = u'это тест. он пройден, если есть ссылка на отдельной строчке: <br>---------<br>тэги работают<br>это ссылка на фото<br>https://pbs.twimg.com/media/CVj1eaWWUAAZ2mX.png:large<br>а еще должно быть вложение'
+
+photo_list = ["photo104995591_397714580","photo104995591_397714582","photo104995591_397714584","photo104995591_397714586","photo104995591_397714587","photo104995591_397714588","photo104995591_397714592","photo104995591_397714597","photo104995591_397714601","photo104995591_397714605","photo104995591_397714608","photo104995591_397714612","photo104995591_397714616","photo104995591_397714623","photo104995591_397714630","photo104995591_397714637","photo104995591_397714642","photo104995591_397714648","photo104995591_397714652","photo104995591_397714657","photo104995591_397714663","photo104995591_397714666","photo104995591_397714671","photo104995591_397714676","photo104995591_397714684","photo104995591_397714687","photo104995591_397714697","photo104995591_397714703","photo104995591_397714708","photo104995591_397714711","photo104995591_397714718","photo104995591_397714721","photo104995591_397714724","photo104995591_397714728"]
 
 # get prepared...
 driver = wd.Chrome()
 driver.get('http://vk.com/')
 conf = CP()
 conf.read('vk_settings.ini')
+conn = sqlite3.connect('vk_schoolboys.sqlite')
+DB = conn.cursor()
+
 # authorization. no sanity check (((
 driver.find_element_by_name('email').send_keys(conf.get('Settings', 'Login'))
 driver.find_element_by_name('pass').send_keys(conf.get('Settings', 'Password'))
@@ -54,6 +61,19 @@ def friends_add(user_id):
 # try to fill out the forms on the page http://vk.com/dev/messages.send
 driver.get('http://vk.com/dev/messages.send')
 
+ids_str = '15232261, 1536864' # default values. send to my buddies
+
+# get random users (6-15) from DB and make a str from their ids
+users_bunch = random.randint(6,15)
+# todo: must insert 'sent' column in the table
+DB.execute("""SELECT id FROM Schoolboys WHERE 'sent' < 1 LIMIT (?)""", (users_bunch) )
+users_list = DB.fetchall() # returns a list of tuples from DB.execute
+ids_str = ",".join(str(tpl[0] for tpl in users_list)) # make string from all ids to put in the field
+
+# get random picture or text. random from the length of 'photo_list'
+photo_id = photo_list[random.randint(0, len(photo_list) - 1)] # is string
+txt = txt_list[random.randint(0, len(txt_list) - 1)] # is string
+
 try:
     element = Wait(driver, rnd_time()).until(
         EC.presence_of_element_located((By.ID, "dev_const_user_id"))
@@ -65,8 +85,10 @@ finally:
     time.sleep(rnd_time())
     driver.find_element_by_id('dev_const_message').clear()
     time.sleep(rnd_time())
+    # should we check what we have - picture or text? and select corresponding 'send'
+    # just both for now
     driver.find_element_by_id('dev_const_message').send_keys(txt)
-    driver.find_element_by_id('dev_const_attachment').send_keys('photo3095244_396678520') # need SFW photo
+    driver.find_element_by_id('dev_const_attachment').send_keys(photo_id)
     time.sleep(rnd_time())
     driver.find_element_by_id('dev_req_run_btn').click()
     time.sleep(rnd_time())
@@ -78,5 +100,15 @@ finally:
         # find user_ids in the response
         users = parse_uid(driver.find_element_by_class_name('dev_result_obj'))
         for user in users:
-            friends_add(user)
+            # write to DB that he must be added to the friends sometime manually
+            # friends_add(user)
+            DB.execute("""UPDATE Schoolboys SET 'sent' = ?, 'sent_pic' = ? WHERE id = ?""", (2, photo_id, user) )
+            conn.commit()
+    
     driver.quit()
+    
+    # we've sent some mails and left selenium. now it's time to update DB on the 'sent' status
+    for user_tpl in users_list:
+        DB.execute("""UPDATE Schoolboys SET 'sent' = ?, 'sent_pic' = ? WHERE id = ?""", (1, photo_id, user_tpl[0]) )
+    
+    conn.commit()
